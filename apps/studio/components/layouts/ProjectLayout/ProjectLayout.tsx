@@ -1,7 +1,7 @@
 import { useParams } from 'common'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { Fragment, PropsWithChildren, ReactNode, useEffect } from 'react'
+import { Fragment, PropsWithChildren, ReactNode, useEffect, useState } from 'react'
 
 import ProjectAPIDocs from 'components/interfaces/ProjectAPIDocs/ProjectAPIDocs'
 import AISettingsModal from 'components/ui/AISettingsModal'
@@ -89,6 +89,39 @@ const ProjectLayout = ({
 
   const navLayoutV2 = useFlag('navigationLayoutV2')
 
+  const [minSize, setMinSize] = useState(5)
+  const [maxSize, setMaxSize] = useState(10)
+
+  const MIN_SIZE_IN_PIXELS = 256 // min-w-64
+  const MAX_SIZE_IN_PIXELS = 512 // 32rem
+
+  useEffect(() => {
+    const panelGroup: HTMLDivElement = document.querySelector('[data-panel-group-id]')!
+    const resizeHandles: NodeListOf<HTMLDivElement> = document.querySelectorAll(
+      '[data-panel-resize-handle-id]'
+    )!
+    const observer = new ResizeObserver(() => {
+      let width = panelGroup.offsetWidth
+
+      resizeHandles.forEach((resizeHandle) => {
+        width -= resizeHandle.offsetWidth
+      })
+
+      // Minimum/Maximum size in pixels is a percentage of the PanelGroup's width,
+      // less the (fixed) width of the resize handles.
+      setMinSize((MIN_SIZE_IN_PIXELS / width) * 100)
+      setMaxSize((MAX_SIZE_IN_PIXELS / width) * 100)
+    })
+    observer.observe(panelGroup)
+    resizeHandles.forEach((resizeHandle) => {
+      observer.observe(resizeHandle)
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
   const isPaused = selectedProject?.status === PROJECT_STATUS.INACTIVE
   const showProductMenu =
     selectedProject?.status === PROJECT_STATUS.ACTIVE_HEALTHY ||
@@ -127,8 +160,9 @@ const ProjectLayout = ({
             {showProductMenu && productMenu && (
               <>
                 <ResizablePanel
+                  minSize={minSize}
+                  maxSize={maxSize}
                   className={cn(resizableSidebar ? 'min-w-64 max-w-[32rem]' : 'min-w-64 max-w-64')}
-                  defaultSize={1} // forces panel to smallest width possible, at w-64
                 >
                   <MenuBarWrapper
                     isLoading={isLoading}
