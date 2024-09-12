@@ -19,6 +19,7 @@ import { LOGS_TABLES, LOG_ROUTES_WITH_REPLICA_SUPPORT, LogsTableName } from './L
 import type { Filters, LogSearchCallback, LogTemplate, QueryType } from './Logs.types'
 import { ensureNoTimestampConflict, maybeShowUpgradePrompt } from './Logs.utils'
 import UpgradePrompt from './UpgradePrompt'
+import dayjs from 'dayjs'
 
 /**
  * Acts as a container component for the entire log display
@@ -228,11 +229,20 @@ export const LogsPreviewer = ({
           {!isLoading && showChart && (
             <LogEventChart
               data={eventChartData}
-              onBarClick={(isoTimestamp) => {
+              onBarClick={({ isoTimestamp }) => {
+                // from should be $RANGE minutes before the bar
+                // to should be $RANGE minutes after the bar
+                const RANGE = 5
+                const from = dayjs(isoTimestamp as string)
+                  .subtract(RANGE, 'minute')
+                  .toISOString()
+                const to = dayjs(isoTimestamp as string)
+                  .add(RANGE, 'minute')
+                  .toISOString()
                 handleSearch('event-chart-bar-click', {
                   query: filters.search_query as string,
-                  to: isoTimestamp as string,
-                  from: null,
+                  to: to,
+                  from: from,
                 })
               }}
             />
