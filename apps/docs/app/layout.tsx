@@ -4,7 +4,7 @@ import '../styles/main.scss'
 import '../styles/new-docs.scss'
 import '../styles/prism-okaidia.scss'
 
-import { genFaviconData } from 'common/MetaFavicons/app-router'
+import { genFaviconData, genManifestData } from 'common/MetaFavicons/app-router'
 import { type Metadata, type Viewport } from 'next'
 
 import { BASE_PATH } from '~/lib/constants'
@@ -18,6 +18,7 @@ const metadata: Metadata = {
     'Supabase is an open source Firebase alternative providing all the backend features you need to build a product.',
   metadataBase: new URL('https://supabase.com'),
   icons: genFaviconData(BASE_PATH),
+  manifest: genManifestData(BASE_PATH),
   robots: {
     index: true,
     follow: true,
