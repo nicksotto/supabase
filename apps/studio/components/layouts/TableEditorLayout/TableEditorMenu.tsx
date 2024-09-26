@@ -172,7 +172,7 @@ const TableEditorMenu = () => {
             <InnerSideBarFilterSearchInput
               autoFocus
               name="search-tables"
-              aria-labelledby="Search tables"
+              aria-label="Search tables"
               onChange={(e) => {
                 setSearchText(e.target.value)
               }}
