@@ -12,39 +12,11 @@ import {
   Trash,
   Unlock,
 } from 'lucide-react'
-import {
-  Copy,
-  Download,
-  Edit,
-  Eye,
-  Files,
-  Lock,
-  MoreHorizontal,
-  Table2,
-  Trash,
-  Unlock,
-} from 'lucide-react'
-import {
-  Copy,
-  Download,
-  Edit,
-  Eye,
-  Lock,
-  MoreHorizontal,
-  Table2,
-  Trash,
-  Unlock,
-} from 'lucide-react'
-import { Eye, MoreHorizontal, Table2, Unlock } from 'lucide-react'
 import Link from 'next/link'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 
 import { IS_PLATFORM } from 'common'
-import { parseSupaTable } from 'components/grid/SupabaseGrid.utils'
-import { getEntityLintDetails } from 'components/interfaces/TableGridEditor/TableEntity.utils'
-import { parseSupaTable } from 'components/grid'
-import { getEntityLintDetails } from 'components/interfaces/TableGridEditor/TableEntity.utils'
 import {
   MAX_EXPORT_ROW_COUNT,
   MAX_EXPORT_ROW_COUNT_MESSAGE,
@@ -74,20 +46,8 @@ import {
   DropdownMenuTrigger,
 } from 'ui'
 import { useProjectContext } from '../ProjectLayout/ProjectContext'
-import useTableDefinition from 'hooks/misc/useTableDefinition'
-import useEntityType from 'hooks/misc/useEntityType'
 import useTableDefinition from '../../../hooks/misc/useTableDefinition'
 import useEntityType from '../../../hooks/misc/useEntityType'
-import {
-  getTableDefinitionQuery,
-  useTableDefinitionQuery,
-} from '../../../data/database/table-definition-query'
-import { format } from 'sql-formatter'
-import { useMemo } from 'react'
-import { useViewDefinitionQuery } from '../../../data/database/view-definition-query'
-import { useSelectedProject } from '../../../hooks'
-import { getTableDefinitionQuery, useTableDefinitionQuery } from '../../../data/database/table-definition-query'
-import { getTableDefinitionQuery } from '../../../data/database/table-definition-query'
 import { Markdown } from 'components/interfaces/Markdown'
 import { EditorTablePageLink } from 'data/prefetchers/project.$ref.editor.$id'
 
