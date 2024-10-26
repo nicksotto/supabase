@@ -5,6 +5,7 @@ import {
   Download,
   Edit,
   Eye,
+  Files,
   Lock,
   MoreHorizontal,
   Table2,
@@ -45,6 +46,8 @@ import {
   DropdownMenuTrigger,
 } from 'ui'
 import { useProjectContext } from '../ProjectLayout/ProjectContext'
+import useTableDefinition from '../../../hooks/misc/useTableDefinition'
+import useEntityType from '../../../hooks/misc/useEntityType'
 import { Markdown } from 'components/interfaces/Markdown'
 import { EditorTablePageLink } from 'data/prefetchers/project.$ref.editor.$id'
 
@@ -100,6 +103,16 @@ const EntityListItem: ItemRenderer<Entity, EntityListItemProps> = ({
       ?.toLowerCase()
       ?.split('_')
       ?.join(' ')
+  }
+
+  const { formattedDefinition } = useTableDefinition(useEntityType(id), project)
+  const copyDefinition = async () => {
+    try {
+      await navigator.clipboard.writeText(formattedDefinition!)
+      toast.success('Definition successfully copied to clipboard.')
+    } catch (error: any) {
+      toast.error('Failed to copy definition.')
+    }
   }
 
   const exportTableAsCSV = async () => {
@@ -403,6 +416,28 @@ const EntityListItem: ItemRenderer<Entity, EntityListItemProps> = ({
                 <Lock size={12} />
                 <span>View Policies</span>
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              key="download-table-csv"
+              className="space-x-2"
+              onClick={(e) => {
+                e.stopPropagation()
+                exportTableAsCSV()
+              }}
+            >
+              <Download size={12} />
+              <span>Export as CSV</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              key="copy-definition"
+              className="space-x-2"
+              onClick={(e) => {
+                e.stopPropagation()
+                copyDefinition()
+              }}
+            >
+              <Files size={12} />
+              <span>Copy Definition</span>
             </DropdownMenuItem>
 
             <DropdownMenuSub>
