@@ -2,8 +2,8 @@ import { cache, type PropsWithChildren } from 'react'
 
 import { IS_PLATFORM } from 'common'
 
-import { supabaseMisc } from '~/lib/supabaseMisc'
 import Layout from '~/layouts/guides'
+import { supabaseMisc } from '~/lib/supabaseMisc'
 
 // Revalidate occasionally to pick up changes to partners
 // 60 seconds/minute * 60 minutes/hour * 24 hours/day
