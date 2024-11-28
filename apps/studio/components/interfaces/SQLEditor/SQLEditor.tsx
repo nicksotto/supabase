@@ -1,7 +1,7 @@
 import type { Monaco } from '@monaco-editor/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { ChevronUp, Loader2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronUp, Command, Loader2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -43,6 +43,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   ImperativePanelHandle,
+  Input,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -79,6 +80,8 @@ import {
   suffixWithLimit,
 } from './SQLEditor.utils'
 import UtilityPanel from './UtilityPanel/UtilityPanel'
+import { constructHeaders } from 'data/fetchers'
+import { useCompletion } from 'ai/react'
 
 // Load the monaco editor client-side only (does not behave well server-side)
 const MonacoEditor = dynamic(() => import('./MonacoEditor'), { ssr: false })
@@ -393,7 +396,7 @@ const SQLEditor = () => {
         // if the editor is empty, just copy over the code
         editorRef.current?.executeEdits('apply-ai-message', [
           {
-            text: `${sqlAiDisclaimerComment}\n\n${sql}`,
+            text: `${sql}`,
             range: editorModel.getFullModelRange(),
           },
         ])
@@ -424,13 +427,10 @@ const SQLEditor = () => {
           entityDefinitions,
         })
 
-        const formattedSql =
-          sqlAiDisclaimerComment +
-          '\n\n' +
-          format(sql, {
-            language: 'postgresql',
-            keywordCase: 'lower',
-          })
+        const formattedSql = format(sql, {
+          language: 'postgresql',
+          keywordCase: 'lower',
+        })
         setDebugSolution(solution)
         setSourceSqlDiff({
           original: snippet.snippet.content.sql,
@@ -525,18 +525,138 @@ const SQLEditor = () => {
     setPendingTitle(undefined)
   }, [debugSolution, router])
 
+  const {
+    complete,
+    completion,
+    isLoading: isCompletionLoading,
+    error: completionError,
+  } = useCompletion({
+    api: '/api/ai/monaco/complete',
+    body: {
+      projectRef: project?.ref,
+      connectionString: project?.connectionString,
+      includeSchemaMetadata,
+    },
+    onResponse: (response) => {
+      if (!response.ok) {
+        throw new Error('Failed to generate completion')
+      }
+    },
+    onFinish: (prompt, completion) => {
+      setAiQueryCount((count) => count + 1)
+    },
+    onError: (error) => {
+      toast.error('Failed to generate SQL')
+    },
+  })
+
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean
+    selection: string
+    beforeSelection: string
+    afterSelection: string
+    isLoading: boolean
+  }>({
+    isOpen: false,
+    selection: '',
+    beforeSelection: '',
+    afterSelection: '',
+    isLoading: false,
+  })
+
+  const [promptInput, setPromptInput] = useState('')
+
+  const handlePrompt = async () => {
+    try {
+      // Set loading state before starting completion
+      setPromptState((prev) => ({ ...prev, isLoading: true }))
+      const headerData = await constructHeaders()
+
+      await complete(promptInput, {
+        headers: { Authorization: headerData.get('Authorization') ?? '' },
+        body: {
+          completionMetadata: {
+            textBeforeCursor: promptState.beforeSelection,
+            textAfterCursor: promptState.afterSelection,
+            language: 'pgsql',
+            prompt: promptInput,
+            selection: promptState.selection,
+          },
+        },
+      })
+    } catch (error) {
+      // Clear loading state on error
+      setPromptState((prev) => ({ ...prev, isLoading: false }))
+      // Error will be handled by onError callback
+    }
+  }
+
+  const handleAcceptPrompt = () => {
+    if (sourceSqlDiff?.modified) {
+      acceptAiHandler()
+      // Clear prompt and completion states
+      setPromptInput('')
+      setPromptState({
+        isOpen: false,
+        selection: '',
+        beforeSelection: '',
+        afterSelection: '',
+        isLoading: false,
+      })
+      // Clear completion state
+      setSourceSqlDiff(undefined)
+      setSelectedDiffType(undefined)
+    }
+  }
+
+  useEffect(() => {
+    // Reset prompt input whenever isOpen changes
+    if (!promptState.isOpen) {
+      setPromptInput('')
+    }
+  }, [promptState.isOpen])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (!isDiffOpen) {
+      if (!isDiffOpen && !promptState.isOpen) {
         return
       }
 
       switch (e.key) {
         case 'Enter':
-          acceptAiHandler()
+          if (e.shiftKey && isDiffOpen) {
+            acceptAiHandler()
+            setPromptInput('')
+            setPromptState({
+              isOpen: false,
+              selection: '',
+              beforeSelection: '',
+              afterSelection: '',
+              isLoading: false,
+            })
+          }
           return
         case 'Escape':
-          discardAiHandler()
+          if (isDiffOpen) {
+            discardAiHandler()
+            setPromptInput('')
+            setPromptState({
+              isOpen: false,
+              selection: '',
+              beforeSelection: '',
+              afterSelection: '',
+              isLoading: false,
+            })
+          } else if (promptState.isOpen) {
+            setPromptInput('')
+            setPromptState({
+              isOpen: false,
+              selection: '',
+              beforeSelection: '',
+              afterSelection: '',
+              isLoading: false,
+            })
+          }
           return
       }
     }
@@ -544,7 +664,7 @@ const SQLEditor = () => {
     window.addEventListener('keydown', handler)
 
     return () => window.removeEventListener('keydown', handler)
-  }, [isDiffOpen, acceptAiHandler, discardAiHandler])
+  }, [isDiffOpen, promptState.isOpen, acceptAiHandler, discardAiHandler])
 
   useEffect(() => {
     const applyDiff = ({ original, modified }: { original: string; modified: string }) => {
@@ -626,6 +746,24 @@ const SQLEditor = () => {
     }
   }, [selectedDiffType, sourceSqlDiff])
 
+  useEffect(() => {
+    if (completionError) {
+      toast.error('Failed to generate SQL')
+    }
+  }, [completionError])
+
+  useEffect(() => {
+    if (completion && isCompletionLoading) {
+      setSourceSqlDiff({
+        original: promptState.beforeSelection + promptState.selection + promptState.afterSelection,
+        modified: promptState.beforeSelection + completion + promptState.afterSelection,
+      })
+      setSelectedDiffType(DiffType.Modification)
+      // Set promptState.isLoading to false when completion is received
+      setPromptState((prev) => ({ ...prev, isLoading: false }))
+    }
+  }, [completion, promptState.beforeSelection, promptState.selection, promptState.afterSelection])
+
   return (
     <>
       <ConfirmationModal
@@ -699,7 +837,7 @@ const SQLEditor = () => {
                   appSnap.setShowAiSettingsModal(true)
                 }}
               >
-                {isDiffOpen && (
+                {isDiffOpen && !promptState.isOpen && (
                   <motion.div
                     key="ask-ai-input-container"
                     layoutId="ask-ai-input-container"
@@ -727,8 +865,65 @@ const SQLEditor = () => {
                 )}
               </AISchemaSuggestionPopover>
             )}
+
             <ResizablePanel maxSize={70}>
               <div className="flex-grow overflow-y-auto border-b h-full">
+                {promptState.isOpen && (
+                  <div className="bg border-b">
+                    <div className="flex gap-4 pr-2 py-1 items-center">
+                      <Input
+                        className="flex-1"
+                        autoFocus
+                        inputClassName="bg-transparent border-none focus:ring-0 px-4"
+                        value={promptInput}
+                        onChange={(e) => setPromptInput(e.target.value)}
+                        placeholder="Edit your query..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            handlePrompt()
+                          }
+                        }}
+                      />
+                      <p className="text-foreground-muted text-xs">Escape to close</p>
+                      {!sourceSqlDiff || isCompletionLoading ? (
+                        <Button
+                          onClick={handlePrompt}
+                          loading={isCompletionLoading}
+                          disabled={isCompletionLoading}
+                        >
+                          Submit edit
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleAcceptPrompt}
+                            loading={isCompletionLoading}
+                            disabled={isCompletionLoading}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            type="default"
+                            onClick={() => {
+                              discardAiHandler()
+                              setPromptInput('')
+                              setPromptState({
+                                isOpen: false,
+                                selection: '',
+                                beforeSelection: '',
+                                afterSelection: '',
+                                isLoading: false,
+                              })
+                            }}
+                            disabled={isCompletionLoading}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {!isAssistantV2Enabled && !isAiOpen && (
                   <motion.button
                     layoutId="ask-ai-input-icon"
@@ -771,15 +966,7 @@ const SQLEditor = () => {
                 ) : (
                   <>
                     {isDiffOpen && (
-                      <motion.div
-                        className="w-full h-full"
-                        variants={{
-                          visible: { opacity: 1, filter: 'blur(0px)' },
-                          hidden: { opacity: 0, filter: 'blur(10px)' },
-                        }}
-                        initial="hidden"
-                        animate="visible"
-                      >
+                      <div className="w-full h-full">
                         <DiffEditor
                           theme="supabase"
                           language="pgsql"
@@ -788,20 +975,11 @@ const SQLEditor = () => {
                           onMount={(editor) => {
                             diffEditorRef.current = editor
                           }}
-                          options={{ fontSize: 13 }}
+                          options={{ fontSize: 13, renderSideBySide: !promptState.isOpen }}
                         />
-                      </motion.div>
+                      </div>
                     )}
-                    <motion.div
-                      key={id}
-                      variants={{
-                        visible: { opacity: 1, filter: 'blur(0px)' },
-                        hidden: { opacity: 0, filter: 'blur(10px)' },
-                      }}
-                      initial="hidden"
-                      animate={isDiffOpen ? 'hidden' : 'visible'}
-                      className="w-full h-full"
-                    >
+                    <div key={id} className="w-full h-full relative">
                       <MonacoEditor
                         autoFocus
                         id={id}
@@ -809,8 +987,29 @@ const SQLEditor = () => {
                         monacoRef={monacoRef}
                         executeQuery={executeQuery}
                         onHasSelection={setHasSelection}
+                        onPrompt={({ selection, beforeSelection, afterSelection }) => {
+                          setPromptState({
+                            isOpen: true,
+                            selection,
+                            beforeSelection,
+                            afterSelection,
+                            isLoading: false,
+                          })
+                        }}
                       />
-                    </motion.div>
+                      <AnimatePresence>
+                        {!promptState.isOpen && !editorRef.current?.getValue() && (
+                          <motion.p
+                            initial={{ y: 5, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 5, opacity: 0 }}
+                            className="text-foreground-muted absolute bottom-4 left-4 z-10 font-mono text-xs flex items-center gap-1"
+                          >
+                            Hit <Command size={12} />K to edit with assistance
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </>
                 )}
               </div>
