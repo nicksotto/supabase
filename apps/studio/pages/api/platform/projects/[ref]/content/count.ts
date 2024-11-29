@@ -1,7 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next'
-
+import { paths } from 'api-types'
 import apiWrapper from 'lib/api/apiWrapper'
-import { DEFAULT_PROJECT } from '../constants'
+import { NextApiRequest, NextApiResponse } from 'next'
 
 export default (req: NextApiRequest, res: NextApiResponse) => apiWrapper(req, res, handler)
 
@@ -17,8 +16,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-const handleGetAll = async (req: NextApiRequest, res: NextApiResponse) => {
-  // Platform specific endpoint
-  const response = [DEFAULT_PROJECT]
-  return res.status(200).json(response)
+type ResponseData =
+  paths['/platform/projects/{ref}/content/count']['get']['responses']['200']['content']['application/json']
+
+const handleGetAll = async (req: NextApiRequest, res: NextApiResponse<ResponseData>) => {
+  return res.status(200).json({ count: 1 })
 }
