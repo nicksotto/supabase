@@ -20,22 +20,29 @@ import kotlin from 'react-syntax-highlighter/dist/cjs/languages/hljs/kotlin'
 import py from 'react-syntax-highlighter/dist/cjs/languages/hljs/python'
 import sql from 'react-syntax-highlighter/dist/cjs/languages/hljs/sql'
 import ts from 'react-syntax-highlighter/dist/cjs/languages/hljs/typescript'
+import php from 'react-syntax-highlighter/dist/cjs/languages/hljs/php'
+import python from 'react-syntax-highlighter/dist/cjs/languages/hljs/python'
+import go from 'react-syntax-highlighter/dist/cjs/languages/hljs/go'
 
+export type CodeBlockLang =
+  | 'js'
+  | 'jsx'
+  | 'sql'
+  | 'py'
+  | 'bash'
+  | 'ts'
+  | 'dart'
+  | 'json'
+  | 'csharp'
+  | 'kotlin'
+  | 'curl'
+  | 'http'
+  | 'php'
+  | 'python'
+  | 'go'
 export interface CodeBlockProps {
   title?: ReactNode
-  language?:
-    | 'js'
-    | 'jsx'
-    | 'sql'
-    | 'py'
-    | 'bash'
-    | 'ts'
-    | 'dart'
-    | 'json'
-    | 'csharp'
-    | 'kotlin'
-    | 'curl'
-    | 'http'
+  language?: CodeBlockLang
   linesToHighlight?: number[]
   highlightBorder?: boolean
   styleConfig?: {
@@ -129,6 +136,9 @@ export const CodeBlock = ({
   SyntaxHighlighter.registerLanguage('kotlin', kotlin)
   SyntaxHighlighter.registerLanguage('curl', curl)
   SyntaxHighlighter.registerLanguage('http', http)
+  SyntaxHighlighter.registerLanguage('php', php)
+  SyntaxHighlighter.registerLanguage('python', python)
+  SyntaxHighlighter.registerLanguage('go', go)
 
   const large = false
   // don't show line numbers if bash == lang
@@ -157,7 +167,7 @@ export const CodeBlock = ({
             style={monokaiTheme}
             className={cn(
               'code-block border border-surface p-4 w-full !my-0 !bg-surface-100 outline-none focus:border-foreground-lighter/50',
-              `${!title ? '!rounded-md' : '!rounded-t-none !rounded-b-md'}`,
+              `${!title ? 'rounded-md' : 'rounded-t-none rounded-b-md'}`,
               `${!showLineNumbers ? 'pl-6' : ''}`,
               className
             )}

@@ -3,8 +3,9 @@ import { useParams } from 'common'
 import { ExternalLink, Plug } from 'lucide-react'
 import { useState } from 'react'
 
-import { DatabaseConnectionString } from 'components/interfaces/Settings/Database/DatabaseSettings/DatabaseConnectionString'
-import { PoolingModesModal } from 'components/interfaces/Settings/Database/PoolingModesModal'
+import { DatabaseConnectionString } from 'components/interfaces/Connect/DatabaseConnectionString'
+import { DatabaseConnectionString as OldDatabaseConnectionString } from 'components/interfaces/Settings/Database/DatabaseSettings/DatabaseConnectionString'
+
 import Panel from 'components/ui/Panel'
 import { getAPIKeys, useProjectSettingsV2Query } from 'data/config/project-settings-v2-query'
 import { useCheckPermissions } from 'hooks/misc/useCheckPermissions'
@@ -29,8 +30,11 @@ import { CONNECTION_TYPES, ConnectionType, FRAMEWORKS, MOBILES, ORMS } from './C
 import { getContentFilePath } from './Connect.utils'
 import ConnectDropdown from './ConnectDropdown'
 import ConnectTabContent from './ConnectTabContent'
+import { useFlag } from 'hooks/ui/useFlag'
 
 const Connect = () => {
+  const connectDialogUpdate = useFlag('connectDialogUpdate')
+
   const { ref: projectRef } = useParams()
 
   const [connectionObject, setConnectionObject] = useState<ConnectionType[]>(FRAMEWORKS)
@@ -147,12 +151,16 @@ const Connect = () => {
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button type="primary" icon={<Plug className="rotate-90" />}>
+          <Button
+            type="default"
+            className={cn(connectDialogUpdate && 'rounded-full')}
+            icon={<Plug className="rotate-90" />}
+          >
             <span>Connect</span>
           </Button>
         </DialogTrigger>
         <DialogContent className={cn('sm:max-w-5xl p-0')} centered={false}>
-          <DialogHeader className="pb-3">
+          <DialogHeader className={DIALOG_PADDING_X}>
             <DialogTitle>Connect to your project</DialogTitle>
             <DialogDescription>
               Get the connection strings and environment variables for your app
@@ -163,7 +171,7 @@ const Connect = () => {
             defaultValue="direct"
             onValueChange={(value) => handleConnectionType(value)}
           >
-            <TabsList_Shadcn_ className={cn('flex gap-4', DIALOG_PADDING_X_SMALL)}>
+            <TabsList_Shadcn_ className={cn('flex gap-4', DIALOG_PADDING_X)}>
               <TabsTrigger_Shadcn_ key="direct" value="direct" className="px-0">
                 Connection String
               </TabsTrigger_Shadcn_>
@@ -190,7 +198,7 @@ const Connect = () => {
                   className={cn(DIALOG_PADDING_X, DIALOG_PADDING_Y, '!mt-0')}
                 >
                   <div className="flex justify-between">
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-3">
                       <ConnectDropdown
                         state={selectedParent}
                         updateState={handleParentChange}
@@ -257,14 +265,19 @@ const Connect = () => {
             <TabsContent_Shadcn_
               key="direct"
               value="direct"
-              className={cn(DIALOG_PADDING_X_SMALL, DIALOG_PADDING_Y, '!mt-0')}
+              className={cn('!mt-0', 'p-0', 'flex flex-col gap-6', DIALOG_PADDING_Y)}
             >
-              <DatabaseConnectionString appearance="minimal" />
+              {connectDialogUpdate ? (
+                <DatabaseConnectionString />
+              ) : (
+                <div className="px-7">
+                  <OldDatabaseConnectionString appearance="minimal" />
+                </div>
+              )}
             </TabsContent_Shadcn_>
           </Tabs_Shadcn_>
         </DialogContent>
       </Dialog>
-      <PoolingModesModal />
     </>
   )
 }
