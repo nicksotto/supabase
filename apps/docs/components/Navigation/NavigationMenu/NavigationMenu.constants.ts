@@ -48,12 +48,27 @@ export const GLOBAL_MENU_ITEMS: GlobalMenuItems = [
             href: '/guides/realtime',
             level: 'realtime',
           },
+        ],
+        [
+          { label: 'Postgres Modules' },
           {
             label: 'AI & Vectors',
             icon: 'ai',
             href: '/guides/ai',
             level: 'ai',
           },
+          {
+            label: 'Cron Jobs',
+            icon: 'cron',
+            href: '/guides/cron',
+            level: 'cron',
+          },
+          // {
+          //   label: 'Queues',
+          //   icon: 'queue',
+          //   href: '/guides/queues',
+          //   level: 'queue',
+          // },
         ],
       ],
     },
@@ -1111,6 +1126,18 @@ export const database: NavMenuConstant = {
         },
       ],
     },
+  ],
+}
+
+export const cron: NavMenuConstant = {
+  icon: 'cron',
+  title: 'Cron Jobs',
+  url: '/guides/cron',
+  items: [
+    { name: 'Overview', url: '/guides/cron' },
+    { name: 'Install', url: '/guides/cron/install' },
+    { name: 'Create Cron Job', url: '/guides/cron/create-cron-job' },
+    { name: 'Edit or delete Cron Job', url: '/guides/cron/edit-delete-cron-job' },
   ],
 }
 
